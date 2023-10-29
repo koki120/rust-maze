@@ -17,6 +17,15 @@ thread_local!(
         ];
         RefCell::new(d)
     };
+
+    static WIDTH: RefCell<i32> = {
+        let w = 0;
+        RefCell::new(w)
+    };
+    static HEIGHT: RefCell<i32> = {
+        let h = 0;
+        RefCell::new(h)
+    };
     static CAN_GO_X: RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]> = {
         let x: [[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2] = [[0; MAX_HIGHT + 2]; MAX_WIDTH + 2];
         RefCell::new(x)
@@ -68,7 +77,7 @@ fn get_queue_size(queue: &Queue) -> i32 {
 fn enqueue(queue: &mut Queue, data: Elem) {
     assert!(queue.size < BUF_SIZE as i32, "Cannot save");
     queue.buf[1 + queue.tail as usize] = data;
-    queue.size = queue.size + 1;
+    queue.size += 1;
     if queue.size as usize == BUF_SIZE {
         queue.tail = 0;
     }
@@ -78,12 +87,12 @@ fn enqueue(queue: &mut Queue, data: Elem) {
 fn dequeue(queue: &mut Queue) -> Elem {
     assert!(queue.size > 0);
     let result = queue.buf[queue.head as usize + 1].clone();
-    queue.size = queue.size - 1;
+    queue.size -= 1;
 
     if queue.head == BUF_SIZE as i32 {
         queue.head = 0;
     }
-    return result;
+    result
 }
 
 fn can_go(from: Point, direction: Point) -> i32 {
@@ -118,9 +127,11 @@ fn setup_board(file: &mut File) {
         .trim()
         .split(' ')
         .map(|x: &str| x.parse::<i32>().unwrap());
-    let width = numbers.next().unwrap();
-    let height = numbers.next().unwrap();
+    WIDTH.with(|w: &RefCell<i32>| *w.borrow_mut() = numbers.next().unwrap());
+    HEIGHT.with(|h: &RefCell<i32>| *h.borrow_mut() = numbers.next().unwrap());
     buf.clear();
+    let height: i32 = HEIGHT.with(|h| *h.borrow());
+    let width: i32 = WIDTH.with(|w| *w.borrow());
 
     // can_goの初期化
     for i in 0..=(height + 1) {
@@ -165,5 +176,7 @@ fn setup_board(file: &mut File) {
         buf.clear();
     }
 }
+
+fn print_board() {}
 
 fn main() {}
