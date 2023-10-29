@@ -177,6 +177,27 @@ fn setup_board(file: &mut File) {
     }
 }
 
-fn print_board() {}
+fn print_board() {
+    let height: i32 = HEIGHT.with(|h| *h.borrow());
+    let width: i32 = WIDTH.with(|w| *w.borrow());
+    let can_go_x = CAN_GO_X.with(|x| *x.borrow());
+    let can_go_y = CAN_GO_Y.with(|x| *x.borrow());
 
-fn main() {}
+    for i in 0..=(height + 1) {
+        for j in 0..=(width + 1) {
+            println!("{} ", can_go_x[i as usize][j as usize]);
+        }
+        println!("\n");
+    }
+    println!("-----------\n");
+    for i in 0..=(height + 1) {
+        for j in 0..=(width + 1) {
+            println!("{} ", can_go_y[i as usize][j as usize]);
+        }
+        println!("\n");
+    }
+}
+
+fn main() {
+    
+}
