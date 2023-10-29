@@ -1,7 +1,7 @@
 use std::assert;
 use std::cell::RefCell;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Seek, SeekFrom};
+use std::io::{BufRead, BufReader};
 
 const MAX_WIDTH: usize = 30;
 const MAX_HIGHT: usize = 30;
@@ -88,32 +88,27 @@ fn dequeue(queue: &mut Queue) -> Elem {
 
 fn can_go(from: Point, direction: Point) -> i32 {
     let result;
-    if direction.y == 0 {
-        if direction.x > 0 {
-            result = CAN_GO_X.with(|x: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
-                x.borrow()[1 + from.y as usize][1 + from.x as usize]
-            });
-        } else {
-            result = CAN_GO_X.with(|x: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
-                x.borrow()[1 + from.y as usize][from.x as usize]
-            });
-        }
+    if direction.y == 0 && direction.x > 0 {
+        result = CAN_GO_X.with(|x: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
+            x.borrow()[1 + from.y as usize][1 + from.x as usize]
+        });
+    } else if direction.y == 0 {
+        result = CAN_GO_X.with(|x: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
+            x.borrow()[1 + from.y as usize][from.x as usize]
+        });
+    } else if direction.y > 0 {
+        result = CAN_GO_Y.with(|y: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
+            y.borrow()[1 + from.y as usize][1 + from.x as usize]
+        });
     } else {
-        if direction.y > 0 {
-            result = CAN_GO_Y.with(|y: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
-                y.borrow()[1 + from.y as usize][1 + from.x as usize]
-            })
-        } else {
-            result = CAN_GO_Y.with(|y: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
-                y.borrow()[from.y as usize][1 + from.x as usize]
-            })
-        }
+        result = CAN_GO_Y.with(|y: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
+            y.borrow()[from.y as usize][1 + from.x as usize]
+        })
     }
     result
 }
 
 fn setup_board(file: &mut File) {
-    // file.seek(SeekFrom::Start(0)).unwrap();
     let mut reader: BufReader<&mut File> = BufReader::new(file);
 
     // 入力は"width height/n"を想定
@@ -155,7 +150,7 @@ fn setup_board(file: &mut File) {
 
         if i == height {
             break;
-        }
+        };
 
         // 縦の壁の有無を取得
         let mut numbers = buf
