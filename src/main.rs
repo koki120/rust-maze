@@ -103,23 +103,43 @@ fn dequeue() -> Point {
 }
 
 #[allow(dead_code)]
-fn can_go(from: Point, direction: Point) -> i32 {
-    let result;
-    if direction.y == 0 && direction.x > 0 {
-        result = CAN_GO_X.with(|x: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
-            x.borrow()[1 + from.y as usize][1 + from.x as usize]
+fn can_go(from: Point, direction: Point) -> bool {
+    let mut result = false;
+    // 東に行くことができるかチェック
+    if direction.x == 1 {
+        CAN_GO_X.with(|x: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
+            if x.borrow()[1 + from.y as usize][1 + from.x as usize] == 1 {
+                // 行くことができた場合壁で封鎖され戻ることができなくなる
+                x.borrow_mut()[1 + from.y as usize][1 + from.x as usize] = 0;
+                result = true;
+            }
         });
-    } else if direction.y == 0 {
-        result = CAN_GO_X.with(|x: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
-            x.borrow()[1 + from.y as usize][from.x as usize]
+    // 西に行くことができるかチェック
+    } else if direction.x == -1 {
+        CAN_GO_X.with(|x: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
+            if x.borrow()[1 + from.y as usize][from.x as usize] == 1 {
+                // 行くことができた場合壁で封鎖され戻ることができなくなる
+                x.borrow_mut()[1 + from.y as usize][from.x as usize] = 0;
+                result = true;
+            }
         });
-    } else if direction.y > 0 {
-        result = CAN_GO_Y.with(|y: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
-            y.borrow()[1 + from.y as usize][1 + from.x as usize]
+    // 南に行くことができるかチェック
+    } else if direction.y == 1 {
+        CAN_GO_Y.with(|y: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
+            if y.borrow()[1 + from.y as usize][1 + from.x as usize] == 1 {
+                // 行くことができた場合壁で封鎖され戻ることができなくなる
+                y.borrow_mut()[1 + from.y as usize][1 + from.x as usize] = 0;
+                result = true;
+            }
         });
+    // 北に行くことができるかチェック
     } else {
-        result = CAN_GO_Y.with(|y: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
-            y.borrow()[from.y as usize][1 + from.x as usize]
+        CAN_GO_Y.with(|y: &RefCell<[[i32; MAX_HIGHT + 2]; MAX_WIDTH + 2]>| {
+            if y.borrow()[from.y as usize][1 + from.x as usize] == 1 {
+                // 行くことができた場合壁で封鎖され戻ることができなくなる
+                y.borrow_mut()[from.y as usize][1 + from.x as usize] = 0;
+                result = true;
+            }
         })
     }
     result
@@ -207,24 +227,35 @@ fn setup_board(file: &mut File) {
 // }
 
 fn solve() -> i32 {
+    let width = WIDTH.with(|w| *w.borrow());
+    let height = HEIGHT.with(|h| *h.borrow());
     let mut shortest_path_length: i32 = 0;
     reset_queue();
     // スタート地点をenqueue
     enqueue(Point { x: 0, y: 0 });
-    loop {
+    'outer: loop {
+        shortest_path_length += 1;
+
         let current_locations = QUEUE.with(|q| q.borrow().size);
+        // 行く場所がない
         if current_locations == 0 {
             break;
         }
-        // 行ける場所を確認し、その地点をenqueue
-        // 前の地点追加した地点の間に壁を追加
+
+        // 行ける場所を確認し、その地点との間に壁を追加
+        // 行けた場所をenqueue
         for _ in 0..current_locations {
             let here = dequeue();
+            // ゴール
+            if here.x == width - 1 && here.y == height - 1 {
+                break 'outer;
+            }
+            for direction in DIRECTIONS {
+                if can_go(here, direction) {
+                    enqueue(move_point(here, direction))
+                };
+            }
         }
-
-        // enqueueする前のcurrent_locationsをdequeue
-
-        shortest_path_length += 1;
     }
     shortest_path_length
 }
