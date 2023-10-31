@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "queue"
+name = "rust-maze"
 version = "0.1.0"
