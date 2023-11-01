@@ -57,7 +57,6 @@ struct Queue {
     buf: [Point; BUF_SIZE],
 }
 
-#[allow(dead_code)]
 // pointを方向に足して、たどり着くpointを返す関数
 fn move_point(from: Point, direction: Point) -> Point {
     Point {
@@ -78,31 +77,31 @@ fn reset_queue() {
 // queueへの要素追加
 fn enqueue(data: Point) {
     QUEUE.with(|q: &RefCell<Queue>| {
-        assert!(q.borrow().size < BUF_SIZE as i32, "Cannot save");
-        q.borrow_mut().tail += 1;
-        q.borrow_mut().buf[q.borrow().tail as usize] = data;
-        q.borrow_mut().size += 1;
-        if q.borrow().tail as usize == BUF_SIZE {
-            q.borrow_mut().tail = 0;
-        }
+        let mut queue = q.borrow_mut();
+        assert!(
+            queue.size < BUF_SIZE as i32,
+            "Buffer is full, cannot save data."
+        );
+        let tail: i32 = queue.tail;
+        queue.buf[tail as usize] = data;
+        queue.tail = (tail + 1) % BUF_SIZE as i32;
+        queue.size += 1;
     });
 }
 
 // queueへの要素取り出し
 fn dequeue() -> Point {
     QUEUE.with(|q: &RefCell<Queue>| {
-        assert!(q.borrow().size > 0);
-        let result = q.borrow().buf[q.borrow().head as usize];
-        q.borrow_mut().head += 1;
-        q.borrow_mut().size -= 1;
-        if q.borrow().head == BUF_SIZE as i32 {
-            q.borrow_mut().head = 0;
-        }
+        let mut queue = q.borrow_mut();
+        assert!(queue.size > 0, "Buffer is null,cannot get data");
+        let head = queue.head;
+        let result = queue.buf[head as usize];
+        queue.head = (head + 1) % BUF_SIZE as i32;
+        queue.size -= 1;
         result
     })
 }
 
-#[allow(dead_code)]
 fn can_go(from: Point, direction: Point) -> bool {
     let mut result = false;
     // 東に行くことができるかチェック
@@ -196,7 +195,7 @@ fn setup_board(file: &mut File) {
         let mut numbers = buf
             .split_whitespace()
             .map(|x: &str| x.parse::<i32>().unwrap());
-        for j in 1..=(width - 1) {
+        for j in 1..=(width) {
             CAN_GO_Y.with(|y| {
                 y.borrow_mut()[i as usize][j as usize] = 1 - numbers.next().unwrap();
             })
@@ -205,26 +204,27 @@ fn setup_board(file: &mut File) {
     }
 }
 
-// fn print_board() {
-//     let height: i32 = HEIGHT.with(|h| *h.borrow());
-//     let width: i32 = WIDTH.with(|w| *w.borrow());
-//     let can_go_x = CAN_GO_X.with(|x| *x.borrow());
-//     let can_go_y = CAN_GO_Y.with(|x| *x.borrow());
+#[allow(dead_code)]
+fn print_board() {
+    let height: i32 = HEIGHT.with(|h| *h.borrow());
+    let width: i32 = WIDTH.with(|w| *w.borrow());
+    let can_go_x = CAN_GO_X.with(|x| *x.borrow());
+    let can_go_y = CAN_GO_Y.with(|x| *x.borrow());
 
-//     for i in 0..=(height + 1) {
-//         for j in 0..=(width + 1) {
-//             println!("{} ", can_go_x[i as usize][j as usize]);
-//         }
-//         println!("\n");
-//     }
-//     println!("-----------\n");
-//     for i in 0..=(height + 1) {
-//         for j in 0..=(width + 1) {
-//             println!("{} ", can_go_y[i as usize][j as usize]);
-//         }
-//         println!("\n");
-//     }
-// }
+    for i in 1..=(height) {
+        for j in 0..=(width) {
+            println!("{} ", can_go_x[i as usize][j as usize]);
+        }
+        println!("\n");
+    }
+    println!("-----------\n");
+    for i in 0..=(height) {
+        for j in 1..=(width) {
+            println!("{} ", can_go_y[i as usize][j as usize]);
+        }
+        println!("\n");
+    }
+}
 
 fn solve() -> i32 {
     let width = WIDTH.with(|w| *w.borrow());
@@ -239,6 +239,7 @@ fn solve() -> i32 {
         let current_locations = QUEUE.with(|q| q.borrow().size);
         // 行く場所がない
         if current_locations == 0 {
+            shortest_path_length = 0;
             break;
         }
 
@@ -263,7 +264,18 @@ fn solve() -> i32 {
 fn main() {
     let args: Vec<String> = env::args().collect();
     let mut input_file = File::open(&args[1]).unwrap();
-    setup_board(&mut input_file);
-    let res = solve();
-    println!("{}", res);
+    let mut answer_file = File::open(&args[2]).unwrap();
+    let mut reader: BufReader<&mut File> = BufReader::new(&mut answer_file);
+    let mut buf = String::new();
+
+    loop {
+        setup_board(&mut input_file);
+        let res = solve();
+        reader.read_line(&mut buf).unwrap();
+        let mut number = buf
+            .split_whitespace()
+            .map(|x: &str| x.parse::<i32>().unwrap());
+        println!("res:{}, ans:{}", res, number.next().unwrap());
+        //assert!(res == number.next().unwrap(), "This algorithm is flawed!")
+    }
 }
