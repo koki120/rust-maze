@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::{assert, env};
 
 const MAX_WIDTH: usize = 30;
@@ -144,7 +144,9 @@ fn can_go(from: Point, direction: Point) -> bool {
     result
 }
 
-fn setup_board(file: &mut File) {
+fn setup_board(file: &mut File, bytes_reader: &mut u64) {
+    file.seek(SeekFrom::Start(*bytes_reader))
+        .expect("ファイルの読み込み位置を設定できませんでした");
     let mut reader: BufReader<&mut File> = BufReader::new(file);
 
     // 入力は"width height/n"を想定
@@ -202,6 +204,7 @@ fn setup_board(file: &mut File) {
         }
         buf.clear();
     }
+    *bytes_reader = reader.stream_position().unwrap();
 }
 
 #[allow(dead_code)]
@@ -266,16 +269,22 @@ fn main() {
     let mut input_file = File::open(&args[1]).unwrap();
     let mut answer_file = File::open(&args[2]).unwrap();
     let mut reader: BufReader<&mut File> = BufReader::new(&mut answer_file);
+    let mut bite_reader: u64 = 0;
     let mut buf = String::new();
 
     loop {
-        setup_board(&mut input_file);
-        let res = solve();
         reader.read_line(&mut buf).unwrap();
-        let mut number = buf
+        let ans = buf
             .split_whitespace()
-            .map(|x: &str| x.parse::<i32>().unwrap());
-        println!("res:{}, ans:{}", res, number.next().unwrap());
-        //assert!(res == number.next().unwrap(), "This algorithm is flawed!")
+            .map(|x: &str| x.parse::<i32>().unwrap())
+            .next();
+        buf.clear();
+
+        if ans.is_none() {
+            break;
+        }
+
+        setup_board(&mut input_file, &mut bite_reader);
+        assert!(solve() == ans.unwrap(), "このアルゴリズムは不完全です");
     }
 }
