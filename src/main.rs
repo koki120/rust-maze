@@ -269,7 +269,7 @@ fn main() {
     let mut input_file = File::open(&args[1]).unwrap();
     let mut answer_file = File::open(&args[2]).unwrap();
     let mut reader: BufReader<&mut File> = BufReader::new(&mut answer_file);
-    let mut bite_reader: u64 = 0;
+    let mut bytes_reader: u64 = 0;
     let mut buf = String::new();
 
     loop {
@@ -284,7 +284,7 @@ fn main() {
             break;
         }
 
-        setup_board(&mut input_file, &mut bite_reader);
+        setup_board(&mut input_file, &mut bytes_reader);
         assert!(solve() == ans.unwrap(), "このアルゴリズムは不完全です");
     }
 }
